@@ -79,4 +79,23 @@ describe('CUE API (e2e)', () => {
         statusCode: 400,
       });
   });
+
+    it('/meetings (GET) returns meetings created during the same session', async () => {
+    await request(app.getHttpServer())
+      .post('/meetings')
+      .send({ title: 'Architecture discussion' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .get('/meetings')
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toEqual([
+          expect.objectContaining({
+            title: 'Architecture discussion',
+            status: 'active',
+          }),
+        ]);
+      });
+  });
 });

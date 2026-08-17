@@ -21,4 +21,12 @@ describe('MeetingsService', () => {
     expect(meeting.id).toEqual(expect.any(String));
     expect(meeting.startedAt).toEqual(expect.any(String));
   });
+
+    it('returns the meetings it has created', () => {
+    const createdMeeting = meetingsService.create({
+      title: 'Architecture discussion',
+    });
+
+    expect(meetingsService.findAll()).toEqual([createdMeeting]);
+  });
 });
