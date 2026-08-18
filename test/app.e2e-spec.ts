@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
+import type { Meeting } from './../src/meetings/meeting';
 
 describe('CUE API (e2e)', () => {
   let app: INestApplication<App>;
@@ -30,13 +31,10 @@ describe('CUE API (e2e)', () => {
   });
 
   it('/health (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/health')
-      .expect(200)
-      .expect({
-        status: 'ok',
-        service: 'cue-engine',
-      });
+    return request(app.getHttpServer()).get('/health').expect(200).expect({
+      status: 'ok',
+      service: 'cue-engine',
+    });
   });
 
   it('/meetings (POST) creates an active meeting', async () => {
@@ -45,17 +43,17 @@ describe('CUE API (e2e)', () => {
       .send({ title: 'Architecture discussion' })
       .expect(201)
       .expect(({ body }) => {
-        expect(body).toEqual(
+        const meeting = body as Meeting;
+
+        expect(meeting).toEqual(
           expect.objectContaining({
             title: 'Architecture discussion',
             status: 'active',
           }),
         );
-        expect(body.id).toEqual(expect.any(String));
-        expect(body.startedAt).toEqual(expect.any(String));
+        expect(meeting.id).toEqual(expect.any(String));
+        expect(meeting.startedAt).toEqual(expect.any(String));
       });
-
-    
   });
 
   it('/meetings (POST) rejects an empty title', () => {
@@ -82,7 +80,7 @@ describe('CUE API (e2e)', () => {
       });
   });
 
-    it('/meetings (GET) returns meetings created during the same session', async () => {
+  it('/meetings (GET) returns meetings created during the same session', async () => {
     await request(app.getHttpServer())
       .post('/meetings')
       .send({ title: 'Architecture discussion' })
@@ -92,7 +90,9 @@ describe('CUE API (e2e)', () => {
       .get('/meetings')
       .expect(200)
       .expect(({ body }) => {
-        expect(body).toEqual([
+        const meetings = body as Meeting[];
+
+        expect(meetings).toEqual([
           expect.objectContaining({
             title: 'Architecture discussion',
             status: 'active',
@@ -101,23 +101,27 @@ describe('CUE API (e2e)', () => {
       });
   });
 
-    it('/meetings/:id/end (PATCH) ends an active meeting', async () => {
-    const { body: createdMeeting } = await request(app.getHttpServer())
+  it('/meetings/:id/end (PATCH) ends an active meeting', async () => {
+    const response = await request(app.getHttpServer())
       .post('/meetings')
       .send({ title: 'Architecture discussion' })
       .expect(201);
+
+    const createdMeeting = response.body as Meeting;
 
     await request(app.getHttpServer())
       .patch(`/meetings/${createdMeeting.id}/end`)
       .expect(200)
       .expect(({ body }) => {
-        expect(body).toEqual(
+        const endedMeeting = body as Meeting;
+
+        expect(endedMeeting).toEqual(
           expect.objectContaining({
             id: createdMeeting.id,
             status: 'ended',
           }),
         );
-        expect(body.endedAt).toEqual(expect.any(String));
+        expect(endedMeeting.endedAt).toEqual(expect.any(String));
       });
   });
 

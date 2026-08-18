@@ -23,7 +23,7 @@ describe('MeetingsService', () => {
     expect(meeting.startedAt).toEqual(expect.any(String));
   });
 
-    it('returns the meetings it has created', () => {
+  it('returns the meetings it has created', () => {
     const createdMeeting = meetingsService.create({
       title: 'Architecture discussion',
     });
@@ -31,7 +31,7 @@ describe('MeetingsService', () => {
     expect(meetingsService.findAll()).toEqual([createdMeeting]);
   });
 
-    it('ends an active meeting', () => {
+  it('ends an active meeting', () => {
     const meeting = meetingsService.create({
       title: 'Architecture discussion',
     });

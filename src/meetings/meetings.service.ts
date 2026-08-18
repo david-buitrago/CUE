@@ -5,34 +5,34 @@ import { Meeting } from './meeting';
 
 @Injectable()
 export class MeetingsService {
-    private readonly meetings = new Map<string, Meeting>();
+  private readonly meetings = new Map<string, Meeting>();
 
-    create(createMeetingDto: CreateMeetingDto): Meeting {
-        const meeting: Meeting = {
-            id: randomUUID(),
-            title: createMeetingDto.title,
-            status: 'active',
-            startedAt: new Date().toISOString(),
-        };
+  create(createMeetingDto: CreateMeetingDto): Meeting {
+    const meeting: Meeting = {
+      id: randomUUID(),
+      title: createMeetingDto.title,
+      status: 'active',
+      startedAt: new Date().toISOString(),
+    };
 
-        this.meetings.set(meeting.id, meeting);
+    this.meetings.set(meeting.id, meeting);
 
-        return meeting;
+    return meeting;
+  }
+
+  findAll(): Meeting[] {
+    return Array.from(this.meetings.values());
+  }
+  end(id: string): Meeting {
+    const meeting = this.meetings.get(id);
+
+    if (!meeting) {
+      throw new NotFoundException(`Meeting with id ${id} was not found`);
     }
 
-    findAll(): Meeting[] {
-        return Array.from(this.meetings.values());
-    }
-    end(id: string): Meeting {
-        const meeting = this.meetings.get(id);
+    meeting.status = 'ended';
+    meeting.endedAt = new Date().toISOString();
 
-        if (!meeting) {
-            throw new NotFoundException(`Meeting with id ${id} was not found`);
-        }
-
-        meeting.status = 'ended';
-        meeting.endedAt = new Date().toISOString();
-
-        return meeting;
-    }
+    return meeting;
+  }
 }
