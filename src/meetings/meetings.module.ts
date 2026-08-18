@@ -4,6 +4,6 @@ import { MeetingsService } from './meetings.service';
 
 @Module({
   controllers: [MeetingsController],
-  providers: [MeetingsService]
+  providers: [MeetingsService],
 })
 export class MeetingsModule {}
