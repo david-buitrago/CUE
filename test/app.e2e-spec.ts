@@ -54,6 +54,8 @@ describe('CUE API (e2e)', () => {
         expect(body.id).toEqual(expect.any(String));
         expect(body.startedAt).toEqual(expect.any(String));
       });
+
+    
   });
 
   it('/meetings (POST) rejects an empty title', () => {
@@ -96,6 +98,37 @@ describe('CUE API (e2e)', () => {
             status: 'active',
           }),
         ]);
+      });
+  });
+
+    it('/meetings/:id/end (PATCH) ends an active meeting', async () => {
+    const { body: createdMeeting } = await request(app.getHttpServer())
+      .post('/meetings')
+      .send({ title: 'Architecture discussion' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .patch(`/meetings/${createdMeeting.id}/end`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toEqual(
+          expect.objectContaining({
+            id: createdMeeting.id,
+            status: 'ended',
+          }),
+        );
+        expect(body.endedAt).toEqual(expect.any(String));
+      });
+  });
+
+  it('/meetings/:id/end (PATCH) returns 404 for an unknown meeting', () => {
+    return request(app.getHttpServer())
+      .patch('/meetings/missing-meeting/end')
+      .expect(404)
+      .expect({
+        message: 'Meeting with id missing-meeting was not found',
+        error: 'Not Found',
+        statusCode: 404,
       });
   });
 });

@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Get } from '@nestjs/common';
+import { Body, Controller, Post, Get, Param, Patch } from '@nestjs/common';
 import { CreateMeetingDto } from './dto/create-meeting.dto';
 import { MeetingsService } from './meetings.service';
 
@@ -14,5 +14,10 @@ export class MeetingsController {
     @Post()
     create(@Body() createMeetingDto: CreateMeetingDto) {
         return this.meetingsService.create(createMeetingDto);
+    }
+
+    @Patch(':id/end')
+    end(@Param('id') id: string) {
+        return this.meetingsService.end(id);
     }
 }

@@ -5,4 +5,5 @@ export interface Meeting {
   title: string;
   status: MeetingStatus;
   startedAt: string;
+  endedAt?: string;
 }
