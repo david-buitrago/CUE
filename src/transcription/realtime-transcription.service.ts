@@ -13,6 +13,10 @@ import { Inject } from '@nestjs/common';
 @Injectable()
 export class RealtimeTranscriptionService {
   private readonly sessions = new Map<string, SpeechToTextSession>();
+  private readonly recentFinalTranscripts = new Map<
+    string,
+    { text: string; receivedAt: number }
+  >();
 
   constructor(
     private readonly meetingsService: MeetingsService,
@@ -51,6 +55,10 @@ export class RealtimeTranscriptionService {
         });
       },
       onFinal: (text) => {
+        if (this.isDuplicateFinalTranscript(meetingId, channel, text)) {
+          return;
+        }
+
         void this.persistFinalTranscript(meetingId, channel, text);
       },
       onError: (message) => {
@@ -80,6 +88,7 @@ export class RealtimeTranscriptionService {
 
     session.close();
     this.sessions.delete(sessionKey);
+    this.recentFinalTranscripts.delete(sessionKey);
   }
 
   private async persistFinalTranscript(
@@ -122,5 +131,19 @@ export class RealtimeTranscriptionService {
 
   private sessionKey(meetingId: string, channel: AudioChannel): string {
     return `${meetingId}:${channel}`;
+  }
+
+  private isDuplicateFinalTranscript(
+    meetingId: string,
+    channel: AudioChannel,
+    text: string,
+  ): boolean {
+    const sessionKey = this.sessionKey(meetingId, channel);
+    const now = Date.now();
+    const previous = this.recentFinalTranscripts.get(sessionKey);
+
+    this.recentFinalTranscripts.set(sessionKey, { text, receivedAt: now });
+
+    return previous?.text === text && now - previous.receivedAt < 1_000;
   }
 }

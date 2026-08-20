@@ -1,0 +1,37 @@
+{
+  "rustc": 13462371384788945141,
+  "features": "[\"audio_toolbox\", \"core_audio\"]",
+  "declared_features": "[\"audio_toolbox\", \"audio_unit\", \"core_audio\", \"core_midi\", \"default\", \"open_al\"]",
+  "target": 4556937446498298006,
+  "profile": 8276155916380437441,
+  "path": 15725371187351439931,
+  "deps": [
+    [3817420670618423238, "objc2_audio_toolbox", false, 11248659060621128911],
+    [5127344325563758221, "bitflags", false, 14298149768273067784],
+    [10504718112287328430, "libc", false, 16418094609345069180],
+    [
+      11433498304369778956,
+      "objc2_core_foundation",
+      false,
+      14243678911331129119
+    ],
+    [
+      13225868837899521237,
+      "objc2_core_audio_types",
+      false,
+      8148079158753833462
+    ],
+    [14011810199689991438, "objc2_core_audio", false, 5173872482689913573]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug/.fingerprint/coreaudio-rs-8f59ba25a56ebafe/dep-lib-coreaudio",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 9396254390672932401,
+  "compile_kind": 0
+}

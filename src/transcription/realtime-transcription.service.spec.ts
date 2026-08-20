@@ -69,6 +69,11 @@ describe('RealtimeTranscriptionService', () => {
       speaker: 'THEM',
       text: 'Why use Kafka for everything?',
     });
+
+    sessionInput?.onFinal('Why use Kafka for everything?');
+    await new Promise(setImmediate);
+
+    expect(transcriptsService.create).toHaveBeenCalledTimes(1);
   });
 
   it('sends audio, commits, and closes an open session', async () => {

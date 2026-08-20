@@ -3,13 +3,17 @@ import { ConfigService } from '@nestjs/config';
 import { MeetingsModule } from '../meetings/meetings.module';
 import { TranscriptsModule } from '../transcripts/transcripts.module';
 import { ElevenLabsSpeechToTextProvider } from './elevenlabs-speech-to-text.provider';
+import { FixtureReplayService } from './fixture-replay.service';
 import { RealtimeTranscriptionService } from './realtime-transcription.service';
 import { SPEECH_TO_TEXT_PROVIDER } from './speech-to-text.provider';
+import { TranscriptionController } from './transcription.controller';
 
 @Module({
   imports: [MeetingsModule, TranscriptsModule],
+  controllers: [TranscriptionController],
   providers: [
     RealtimeTranscriptionService,
+    FixtureReplayService,
     ElevenLabsSpeechToTextProvider,
     {
       provide: SPEECH_TO_TEXT_PROVIDER,

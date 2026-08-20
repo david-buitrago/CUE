@@ -1,0 +1,30 @@
+{
+  "rustc": 13462371384788945141,
+  "features": "[\"AudioHardware\", \"AudioHardwareDeprecated\", \"alloc\", \"objc2\", \"objc2-core-audio-types\", \"objc2-foundation\", \"std\"]",
+  "declared_features": "[\"AudioHardware\", \"AudioHardwareDeprecated\", \"AudioServerPlugIn\", \"HostTime\", \"alloc\", \"block2\", \"default\", \"dispatch2\", \"libc\", \"objc2\", \"objc2-core-audio-types\", \"objc2-foundation\", \"std\", \"unstable-darwin-objc\"]",
+  "target": 4904132704248921535,
+  "profile": 8196097686603091492,
+  "path": 16733971605655941942,
+  "deps": [
+    [2950256323240053722, "objc2_foundation", false, 5829510638823471272],
+    [5711497484949304150, "objc2", false, 3065209243922848768],
+    [
+      11433498304369778956,
+      "objc2_core_foundation",
+      false,
+      11487326930283973680
+    ],
+    [13225868837899521237, "objc2_core_audio_types", false, 4854413216557456336]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug/.fingerprint/objc2-core-audio-46669d2a6336208e/dep-lib-objc2_core_audio",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 9396254390672932401,
+  "compile_kind": 0
+}
