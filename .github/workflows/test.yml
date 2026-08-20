@@ -8,6 +8,22 @@ jobs:
   test:
     name: Unit and end-to-end tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: cue_test
+          POSTGRES_PASSWORD: cue_test_password
+          POSTGRES_USER: cue_test_app
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cue_test_app -d cue_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://cue_test_app:cue_test_password@localhost:5432/cue_test
 
     steps:
       - name: Check out the repository
