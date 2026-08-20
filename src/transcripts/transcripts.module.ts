@@ -7,5 +7,6 @@ import { TranscriptsService } from './transcripts.service';
   controllers: [TranscriptsController],
   providers: [TranscriptsService],
   imports: [MeetingsModule],
+  exports: [TranscriptsService],
 })
 export class TranscriptsModule {}

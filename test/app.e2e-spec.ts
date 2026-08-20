@@ -222,4 +222,36 @@ describe('CUE API (e2e)', () => {
         statusCode: 409,
       });
   });
+
+  it('adds a deterministic transcript simulation to an active meeting', async () => {
+    const meetingResponse = await request(app.getHttpServer())
+      .post('/meetings')
+      .send({ title: 'Architecture discussion' })
+      .expect(201);
+
+    const meeting = meetingResponse.body as Meeting;
+
+    await request(app.getHttpServer())
+      .post(`/meetings/${meeting.id}/transcript-simulation`)
+      .expect(201)
+      .expect(({ body }) => {
+        const segments = body as TranscriptSegment[];
+
+        expect(segments).toHaveLength(3);
+        expect(segments.map((segment) => segment.speaker)).toEqual([
+          'David',
+          'Alex',
+          'David',
+        ]);
+      });
+
+    await request(app.getHttpServer())
+      .get(`/meetings/${meeting.id}/transcript-segments`)
+      .expect(200)
+      .expect(({ body }) => {
+        const segments = body as TranscriptSegment[];
+
+        expect(segments).toHaveLength(3);
+      });
+  });
 });
