@@ -20,7 +20,46 @@ import { TranscriptsModule } from './transcripts/transcripts.module';
           throw new Error('DATABASE_URL must be configured');
         }
 
-        return environment;
+        const configuredProvider = environment.INSIGHTS_PROVIDER;
+
+        if (
+          configuredProvider !== undefined &&
+          typeof configuredProvider !== 'string'
+        ) {
+          throw new Error(
+            'INSIGHTS_PROVIDER must be rule, opencode, or ollama',
+          );
+        }
+
+        const provider = configuredProvider ?? 'rule';
+
+        if (!['rule', 'opencode', 'ollama'].includes(provider)) {
+          throw new Error(
+            'INSIGHTS_PROVIDER must be rule, opencode, or ollama',
+          );
+        }
+
+        if (
+          provider === 'opencode' &&
+          (typeof environment.OPENCODE_API_KEY !== 'string' ||
+            environment.OPENCODE_API_KEY.length === 0)
+        ) {
+          throw new Error(
+            'OPENCODE_API_KEY must be configured when using OpenCode Go',
+          );
+        }
+
+        if (
+          provider === 'ollama' &&
+          (typeof environment.OLLAMA_BASE_URL !== 'string' ||
+            environment.OLLAMA_BASE_URL.length === 0)
+        ) {
+          throw new Error(
+            'OLLAMA_BASE_URL must be configured when using Ollama',
+          );
+        }
+
+        return { ...environment, INSIGHTS_PROVIDER: provider };
       },
     }),
     TypeOrmModule.forRootAsync({
