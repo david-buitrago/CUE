@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { isUUID } from 'class-validator';
 import { randomUUID } from 'node:crypto';
 import { Repository } from 'typeorm';
 import { MeetingsService } from '../meetings/meetings.service';
@@ -63,6 +64,27 @@ export class ActionItemsService {
     return actionItems.map((actionItem) => this.toActionItem(actionItem));
   }
 
+  async complete(meetingId: string, id: string): Promise<ActionItem> {
+    await this.meetingsService.findOne(meetingId);
+    this.assertValidActionItemId(id);
+
+    const actionItem = await this.actionItemsRepository.findOneBy({
+      id,
+      meetingId,
+    });
+
+    if (!actionItem) {
+      throw new NotFoundException(
+        `Action item with id ${id} was not found for meeting ${meetingId}`,
+      );
+    }
+
+    actionItem.status = 'completed';
+    const savedActionItem = await this.actionItemsRepository.save(actionItem);
+
+    return this.toActionItem(savedActionItem);
+  }
+
   private extractDescription(text: string): string | undefined {
     const match = /^(?:action|todo):\s*(.+)$/i.exec(text.trim());
 
@@ -78,5 +100,11 @@ export class ActionItemsService {
       status: actionItem.status,
       createdAt: actionItem.createdAt.toISOString(),
     };
+  }
+
+  private assertValidActionItemId(id: string): void {
+    if (!isUUID(id)) {
+      throw new NotFoundException(`Action item with id ${id} was not found`);
+    }
   }
 }

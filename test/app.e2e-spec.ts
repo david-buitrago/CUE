@@ -300,6 +300,7 @@ describe('CUE API (e2e)', () => {
       .expect(201);
 
     const actionItems = extractionResponse.body as Array<{
+      id: string;
       description: string;
       status: string;
     }>;
@@ -318,6 +319,29 @@ describe('CUE API (e2e)', () => {
       ]),
     );
 
+    const actionItemToComplete = actionItems.find(
+      (actionItem) =>
+        actionItem.description === 'Send the architecture proposal.',
+    );
+
+    if (!actionItemToComplete) {
+      throw new Error('The expected action item was not extracted');
+    }
+
+    await request(app.getHttpServer())
+      .patch(
+        `/meetings/${meeting.id}/action-items/${actionItemToComplete.id}/complete`,
+      )
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toEqual(
+          expect.objectContaining({
+            id: actionItemToComplete.id,
+            status: 'completed',
+          }),
+        );
+      });
+
     await request(app.getHttpServer())
       .post(`/meetings/${meeting.id}/action-items/extract`)
       .expect(201)
@@ -331,9 +355,14 @@ describe('CUE API (e2e)', () => {
       .get(`/meetings/${meeting.id}/action-items`)
       .expect(200)
       .expect(({ body }) => {
-        const persistedActionItems = body as unknown[];
+        const persistedActionItems = body as Array<{ status: string }>;
 
         expect(persistedActionItems).toHaveLength(2);
+        expect(
+          persistedActionItems.some(
+            (actionItem) => actionItem.status === 'completed',
+          ),
+        ).toBe(true);
       });
   });
 
