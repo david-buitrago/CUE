@@ -196,4 +196,30 @@ describe('CUE API (e2e)', () => {
         statusCode: 404,
       });
   });
+
+  it('rejects transcript segments for an ended meeting', async () => {
+    const meetingResponse = await request(app.getHttpServer())
+      .post('/meetings')
+      .send({ title: 'Architecture discussion' })
+      .expect(201);
+
+    const meeting = meetingResponse.body as Meeting;
+
+    await request(app.getHttpServer())
+      .patch(`/meetings/${meeting.id}/end`)
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post(`/meetings/${meeting.id}/transcript-segments`)
+      .send({
+        speaker: 'David',
+        text: 'Let us review the architecture.',
+      })
+      .expect(409)
+      .expect({
+        message: 'Cannot add transcript segments to an ended meeting',
+        error: 'Conflict',
+        statusCode: 409,
+      });
+  });
 });

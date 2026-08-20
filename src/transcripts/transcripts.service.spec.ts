@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { MeetingsService } from '../meetings/meetings.service';
 import { TranscriptsService } from './transcripts.service';
 
@@ -53,5 +53,19 @@ describe('TranscriptsService', () => {
         text: 'Let us review the architecture.',
       }),
     ).toThrow(NotFoundException);
+  });
+
+  it('rejects segments for an ended meeting', () => {
+    const meeting = meetingsService.create({
+      title: 'Architecture discussion',
+    });
+    meetingsService.end(meeting.id);
+
+    expect(() =>
+      transcriptsService.create(meeting.id, {
+        speaker: 'David',
+        text: 'Let us review the architecture.',
+      }),
+    ).toThrow(ConflictException);
   });
 });

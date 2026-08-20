@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { MeetingsService } from '../meetings/meetings.service';
 import { CreateTranscriptSegmentDto } from './dto/create-transcript-segment.dto';
@@ -14,7 +14,13 @@ export class TranscriptsService {
     meetingId: string,
     createTranscriptSegmentDto: CreateTranscriptSegmentDto,
   ): TranscriptSegment {
-    this.meetingsService.findOne(meetingId);
+    const meeting = this.meetingsService.findOne(meetingId);
+
+    if (meeting.status === 'ended') {
+      throw new ConflictException(
+        'Cannot add transcript segments to an ended meeting',
+      );
+    }
 
     const segment: TranscriptSegment = {
       id: randomUUID(),
