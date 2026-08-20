@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { isUUID } from 'class-validator';
 import { randomUUID } from 'node:crypto';
@@ -6,6 +6,10 @@ import { Repository } from 'typeorm';
 import { MeetingsService } from '../meetings/meetings.service';
 import { TranscriptsService } from '../transcripts/transcripts.service';
 import { ActionItem } from './action-item';
+import {
+  ACTION_ITEM_EXTRACTOR,
+  type ActionItemExtractor,
+} from './action-item-extractor';
 import { ActionItemEntity } from './action-item.entity';
 
 @Injectable()
@@ -15,23 +19,36 @@ export class ActionItemsService {
     private readonly transcriptsService: TranscriptsService,
     @InjectRepository(ActionItemEntity)
     private readonly actionItemsRepository: Repository<ActionItemEntity>,
+    @Inject(ACTION_ITEM_EXTRACTOR)
+    private readonly actionItemExtractor: ActionItemExtractor,
   ) {}
 
   async extractForMeeting(meetingId: string): Promise<ActionItem[]> {
     await this.meetingsService.findOne(meetingId);
     const segments =
       await this.transcriptsService.findAllByMeetingId(meetingId);
+    const extractedActionItems =
+      await this.actionItemExtractor.extract(segments);
     const actionItems: ActionItem[] = [];
+    const segmentIds = new Set(segments.map((segment) => segment.id));
+    const processedSegmentIds = new Set<string>();
 
-    for (const segment of segments) {
-      const description = this.extractDescription(segment.text);
+    for (const extractedActionItem of extractedActionItems) {
+      const { sourceSegmentId, description } = extractedActionItem;
 
-      if (!description) {
+      if (
+        !segmentIds.has(sourceSegmentId) ||
+        processedSegmentIds.has(sourceSegmentId) ||
+        description.length === 0 ||
+        description.length > 500
+      ) {
         continue;
       }
 
+      processedSegmentIds.add(sourceSegmentId);
+
       const existingActionItem = await this.actionItemsRepository.findOneBy({
-        sourceSegmentId: segment.id,
+        sourceSegmentId,
       });
 
       if (existingActionItem) {
@@ -42,7 +59,7 @@ export class ActionItemsService {
       const actionItem = this.actionItemsRepository.create({
         id: randomUUID(),
         meetingId,
-        sourceSegmentId: segment.id,
+        sourceSegmentId,
         description,
         status: 'open',
         createdAt: new Date(),
@@ -83,12 +100,6 @@ export class ActionItemsService {
     const savedActionItem = await this.actionItemsRepository.save(actionItem);
 
     return this.toActionItem(savedActionItem);
-  }
-
-  private extractDescription(text: string): string | undefined {
-    const match = /^(?:action|todo):\s*(.+)$/i.exec(text.trim());
-
-    return match?.[1]?.trim() || undefined;
   }
 
   private toActionItem(actionItem: ActionItemEntity): ActionItem {
