@@ -6,6 +6,7 @@ import { HealthModule } from './health/health.module';
 import { MeetingsModule } from './meetings/meetings.module';
 import { SimulatorModule } from './simulator/simulator.module';
 import { SummariesModule } from './summaries/summaries.module';
+import { TranscriptionModule } from './transcription/transcription.module';
 import { TranscriptsModule } from './transcripts/transcripts.module';
 
 @Module({
@@ -76,6 +77,7 @@ import { TranscriptsModule } from './transcripts/transcripts.module';
     HealthModule,
     MeetingsModule,
     SummariesModule,
+    TranscriptionModule,
     TranscriptsModule,
     SimulatorModule,
   ],

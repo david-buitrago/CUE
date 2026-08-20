@@ -13,6 +13,6 @@ import { TranscriptsService } from './transcripts.service';
     MeetingsModule,
     TypeOrmModule.forFeature([TranscriptSegmentEntity]),
   ],
-  exports: [TranscriptsService],
+  exports: [TranscriptsService, TranscriptGateway],
 })
 export class TranscriptsModule {}
