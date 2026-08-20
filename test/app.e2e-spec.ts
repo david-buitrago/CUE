@@ -30,7 +30,9 @@ describe('CUE API (e2e)', () => {
     await app.init();
 
     const dataSource = app.get(DataSource);
-    await dataSource.query('TRUNCATE TABLE transcript_segments, meetings');
+    await dataSource.query(
+      'TRUNCATE TABLE action_items, transcript_segments, meetings',
+    );
   });
 
   afterEach(async () => {
@@ -258,6 +260,80 @@ describe('CUE API (e2e)', () => {
         const segments = body as TranscriptSegment[];
 
         expect(segments).toHaveLength(3);
+      });
+  });
+
+  it('extracts and lists action items without duplicates', async () => {
+    const meetingResponse = await request(app.getHttpServer())
+      .post('/meetings')
+      .send({ title: 'Architecture discussion' })
+      .expect(201);
+
+    const meeting = meetingResponse.body as Meeting;
+
+    await request(app.getHttpServer())
+      .post(`/meetings/${meeting.id}/transcript-segments`)
+      .send({
+        speaker: 'David',
+        text: 'Action: Send the architecture proposal.',
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/meetings/${meeting.id}/transcript-segments`)
+      .send({
+        speaker: 'Alex',
+        text: 'The current design is ready for review.',
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/meetings/${meeting.id}/transcript-segments`)
+      .send({
+        speaker: 'David',
+        text: 'TODO: Schedule the retrospective.',
+      })
+      .expect(201);
+
+    const extractionResponse = await request(app.getHttpServer())
+      .post(`/meetings/${meeting.id}/action-items/extract`)
+      .expect(201);
+
+    const actionItems = extractionResponse.body as Array<{
+      description: string;
+      status: string;
+    }>;
+
+    expect(actionItems).toHaveLength(2);
+    expect(actionItems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          description: 'Send the architecture proposal.',
+          status: 'open',
+        }),
+        expect.objectContaining({
+          description: 'Schedule the retrospective.',
+          status: 'open',
+        }),
+      ]),
+    );
+
+    await request(app.getHttpServer())
+      .post(`/meetings/${meeting.id}/action-items/extract`)
+      .expect(201)
+      .expect(({ body }) => {
+        const repeatedExtraction = body as unknown[];
+
+        expect(repeatedExtraction).toHaveLength(2);
+      });
+
+    await request(app.getHttpServer())
+      .get(`/meetings/${meeting.id}/action-items`)
+      .expect(200)
+      .expect(({ body }) => {
+        const persistedActionItems = body as unknown[];
+
+        expect(persistedActionItems).toHaveLength(2);
       });
   });
 
