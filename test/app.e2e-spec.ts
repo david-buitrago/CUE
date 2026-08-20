@@ -4,6 +4,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 import type { Meeting } from './../src/meetings/meeting';
+import type { TranscriptSegment } from './../src/transcripts/transcript-segment';
 
 describe('CUE API (e2e)', () => {
   let app: INestApplication<App>;
@@ -128,6 +129,66 @@ describe('CUE API (e2e)', () => {
   it('/meetings/:id/end (PATCH) returns 404 for an unknown meeting', () => {
     return request(app.getHttpServer())
       .patch('/meetings/missing-meeting/end')
+      .expect(404)
+      .expect({
+        message: 'Meeting with id missing-meeting was not found',
+        error: 'Not Found',
+        statusCode: 404,
+      });
+  });
+
+  it('creates and lists transcript segments for a meeting', async () => {
+    const meetingResponse = await request(app.getHttpServer())
+      .post('/meetings')
+      .send({ title: 'Architecture discussion' })
+      .expect(201);
+
+    const meeting = meetingResponse.body as Meeting;
+
+    const segmentResponse = await request(app.getHttpServer())
+      .post(`/meetings/${meeting.id}/transcript-segments`)
+      .send({
+        speaker: 'David',
+        text: 'Let us review the architecture.',
+      })
+      .expect(201);
+
+    const segment = segmentResponse.body as TranscriptSegment;
+
+    expect(segment).toEqual(
+      expect.objectContaining({
+        meetingId: meeting.id,
+        speaker: 'David',
+        text: 'Let us review the architecture.',
+      }),
+    );
+    expect(segment.id).toEqual(expect.any(String));
+    expect(segment.capturedAt).toEqual(expect.any(String));
+
+    await request(app.getHttpServer())
+      .get(`/meetings/${meeting.id}/transcript-segments`)
+      .expect(200)
+      .expect(({ body }) => {
+        const segments = body as TranscriptSegment[];
+
+        expect(segments).toEqual([
+          expect.objectContaining({
+            id: segment.id,
+            meetingId: meeting.id,
+            speaker: 'David',
+            text: 'Let us review the architecture.',
+          }),
+        ]);
+      });
+  });
+
+  it('rejects transcript segments for an unknown meeting', () => {
+    return request(app.getHttpServer())
+      .post('/meetings/missing-meeting/transcript-segments')
+      .send({
+        speaker: 'David',
+        text: 'Let us review the architecture.',
+      })
       .expect(404)
       .expect({
         message: 'Meeting with id missing-meeting was not found',

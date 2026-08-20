@@ -23,12 +23,19 @@ export class MeetingsService {
   findAll(): Meeting[] {
     return Array.from(this.meetings.values());
   }
-  end(id: string): Meeting {
+
+  findOne(id: string): Meeting {
     const meeting = this.meetings.get(id);
 
     if (!meeting) {
       throw new NotFoundException(`Meeting with id ${id} was not found`);
     }
+
+    return meeting;
+  }
+
+  end(id: string): Meeting {
+    const meeting = this.findOne(id);
 
     meeting.status = 'ended';
     meeting.endedAt = new Date().toISOString();
