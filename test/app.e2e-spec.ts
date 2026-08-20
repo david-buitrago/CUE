@@ -7,6 +7,7 @@ import { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
 import { AppModule } from './../src/app.module';
 import type { Meeting } from './../src/meetings/meeting';
+import type { MeetingSummary } from './../src/summaries/meeting-summary';
 import type { TranscriptSegment } from './../src/transcripts/transcript-segment';
 
 describe('CUE API (e2e)', () => {
@@ -260,6 +261,39 @@ describe('CUE API (e2e)', () => {
         const segments = body as TranscriptSegment[];
 
         expect(segments).toHaveLength(3);
+      });
+  });
+
+  it('generates a summary from a meeting transcript', async () => {
+    const meetingResponse = await request(app.getHttpServer())
+      .post('/meetings')
+      .send({ title: 'Architecture discussion' })
+      .expect(201);
+
+    const meeting = meetingResponse.body as Meeting;
+
+    await request(app.getHttpServer())
+      .post(`/meetings/${meeting.id}/transcript-segments`)
+      .send({
+        speaker: 'David',
+        text: 'We agreed to use PostgreSQL for persistent meeting data.',
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/meetings/${meeting.id}/summary`)
+      .expect(201)
+      .expect(({ body }) => {
+        const summary = body as MeetingSummary;
+
+        expect(summary).toEqual(
+          expect.objectContaining({
+            meetingId: meeting.id,
+            content:
+              'David: We agreed to use PostgreSQL for persistent meeting data.',
+          }),
+        );
+        expect(summary.generatedAt).toEqual(expect.any(String));
       });
   });
 
