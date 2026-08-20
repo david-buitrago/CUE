@@ -1,5 +1,7 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import type { Server } from 'node:http';
+import { io } from 'socket.io-client';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
@@ -253,5 +255,70 @@ describe('CUE API (e2e)', () => {
 
         expect(segments).toHaveLength(3);
       });
+  });
+
+  it('emits a WebSocket event when a transcript segment is created', async () => {
+    await app.listen(0);
+
+    const httpServer = app.getHttpServer() as unknown as Server;
+    const address = httpServer.address();
+
+    if (!address || typeof address === 'string') {
+      throw new Error('The test server did not expose a TCP address');
+    }
+
+    const meetingResponse = await request(app.getHttpServer())
+      .post('/meetings')
+      .send({ title: 'Architecture discussion' })
+      .expect(201);
+
+    const meeting = meetingResponse.body as Meeting;
+
+    await new Promise<void>((resolve, reject) => {
+      const socket = io(`http://127.0.0.1:${address.port}/live`, {
+        transports: ['websocket'],
+      });
+
+      const timeout = setTimeout(() => {
+        socket.close();
+        reject(new Error('Timed out waiting for the transcript event'));
+      }, 2_000);
+
+      const fail = (error: Error) => {
+        clearTimeout(timeout);
+        socket.close();
+        reject(error);
+      };
+
+      socket.on('connect_error', fail);
+
+      socket.on('transcript.segment.created', (value: unknown) => {
+        const segment = value as TranscriptSegment;
+
+        clearTimeout(timeout);
+        socket.close();
+
+        expect(segment).toEqual(
+          expect.objectContaining({
+            meetingId: meeting.id,
+            speaker: 'David',
+            text: 'Let us review the architecture.',
+          }),
+        );
+
+        resolve();
+      });
+
+      socket.on('connect', () => {
+        void request(app.getHttpServer())
+          .post(`/meetings/${meeting.id}/transcript-segments`)
+          .send({
+            speaker: 'David',
+            text: 'Let us review the architecture.',
+          })
+          .expect(201)
+          .catch(fail);
+      });
+    });
   });
 });

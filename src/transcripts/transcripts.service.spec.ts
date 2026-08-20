@@ -1,14 +1,24 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { MeetingsService } from '../meetings/meetings.service';
+import { TranscriptGateway } from './transcript.gateway';
 import { TranscriptsService } from './transcripts.service';
 
 describe('TranscriptsService', () => {
   let meetingsService: MeetingsService;
+  let transcriptGateway: jest.Mocked<
+    Pick<TranscriptGateway, 'emitSegmentCreated'>
+  >;
   let transcriptsService: TranscriptsService;
 
   beforeEach(() => {
     meetingsService = new MeetingsService();
-    transcriptsService = new TranscriptsService(meetingsService);
+    transcriptGateway = {
+      emitSegmentCreated: jest.fn(),
+    };
+    transcriptsService = new TranscriptsService(
+      meetingsService,
+      transcriptGateway as TranscriptGateway,
+    );
   });
 
   it('creates a transcript segment for an existing meeting', () => {
@@ -30,6 +40,7 @@ describe('TranscriptsService', () => {
     );
     expect(segment.id).toEqual(expect.any(String));
     expect(segment.capturedAt).toEqual(expect.any(String));
+    expect(transcriptGateway.emitSegmentCreated).toHaveBeenCalledWith(segment);
   });
 
   it('returns the segments for a meeting', () => {
