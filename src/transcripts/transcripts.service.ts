@@ -1,17 +1,20 @@
 import { ConflictException, Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
+import { Repository } from 'typeorm';
 import { MeetingsService } from '../meetings/meetings.service';
 import { CreateTranscriptSegmentDto } from './dto/create-transcript-segment.dto';
 import { TranscriptGateway } from './transcript.gateway';
 import { TranscriptSegment } from './transcript-segment';
+import { TranscriptSegmentEntity } from './transcript-segment.entity';
 
 @Injectable()
 export class TranscriptsService {
-  private readonly segmentsByMeetingId = new Map<string, TranscriptSegment[]>();
-
   constructor(
     private readonly meetingsService: MeetingsService,
     private readonly transcriptGateway: TranscriptGateway,
+    @InjectRepository(TranscriptSegmentEntity)
+    private readonly transcriptSegmentsRepository: Repository<TranscriptSegmentEntity>,
   ) {}
 
   async create(
@@ -26,25 +29,41 @@ export class TranscriptsService {
       );
     }
 
-    const segment: TranscriptSegment = {
+    const segment = this.transcriptSegmentsRepository.create({
       id: randomUUID(),
       meetingId,
       speaker: createTranscriptSegmentDto.speaker,
       text: createTranscriptSegmentDto.text,
-      capturedAt: new Date().toISOString(),
-    };
+      capturedAt: new Date(),
+    });
 
-    const segments = this.segmentsByMeetingId.get(meetingId) ?? [];
-    segments.push(segment);
-    this.segmentsByMeetingId.set(meetingId, segments);
-    this.transcriptGateway.emitSegmentCreated(segment);
+    const savedSegment = await this.transcriptSegmentsRepository.save(segment);
+    const transcriptSegment = this.toTranscriptSegment(savedSegment);
+    this.transcriptGateway.emitSegmentCreated(transcriptSegment);
 
-    return segment;
+    return transcriptSegment;
   }
 
   async findAllByMeetingId(meetingId: string): Promise<TranscriptSegment[]> {
     await this.meetingsService.findOne(meetingId);
 
-    return this.segmentsByMeetingId.get(meetingId) ?? [];
+    const segments = await this.transcriptSegmentsRepository.find({
+      where: { meetingId },
+      order: { capturedAt: 'ASC' },
+    });
+
+    return segments.map((segment) => this.toTranscriptSegment(segment));
+  }
+
+  private toTranscriptSegment(
+    segment: TranscriptSegmentEntity,
+  ): TranscriptSegment {
+    return {
+      id: segment.id,
+      meetingId: segment.meetingId,
+      speaker: segment.speaker,
+      text: segment.text,
+      capturedAt: segment.capturedAt.toISOString(),
+    };
   }
 }

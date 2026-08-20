@@ -30,7 +30,7 @@ describe('CUE API (e2e)', () => {
     await app.init();
 
     const dataSource = app.get(DataSource);
-    await dataSource.query('TRUNCATE TABLE meetings');
+    await dataSource.query('TRUNCATE TABLE transcript_segments, meetings');
   });
 
   afterEach(async () => {

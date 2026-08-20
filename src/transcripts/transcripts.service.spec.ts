@@ -1,13 +1,19 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
+import { Repository } from 'typeorm';
 import { Meeting } from '../meetings/meeting';
+import { MeetingEntity } from '../meetings/meeting.entity';
 import { MeetingsService } from '../meetings/meetings.service';
 import { TranscriptGateway } from './transcript.gateway';
+import { TranscriptSegmentEntity } from './transcript-segment.entity';
 import { TranscriptsService } from './transcripts.service';
 
 describe('TranscriptsService', () => {
   let meetingsService: jest.Mocked<Pick<MeetingsService, 'findOne'>>;
   let transcriptGateway: jest.Mocked<
     Pick<TranscriptGateway, 'emitSegmentCreated'>
+  >;
+  let transcriptSegmentsRepository: jest.Mocked<
+    Pick<Repository<TranscriptSegmentEntity>, 'create' | 'find' | 'save'>
   >;
   let transcriptsService: TranscriptsService;
 
@@ -18,9 +24,15 @@ describe('TranscriptsService', () => {
     transcriptGateway = {
       emitSegmentCreated: jest.fn(),
     };
+    transcriptSegmentsRepository = {
+      create: jest.fn(),
+      find: jest.fn(),
+      save: jest.fn(),
+    };
     transcriptsService = new TranscriptsService(
       meetingsService,
       transcriptGateway as TranscriptGateway,
+      transcriptSegmentsRepository as Repository<TranscriptSegmentEntity>,
     );
   });
 
@@ -32,6 +44,12 @@ describe('TranscriptsService', () => {
       startedAt: '2026-08-20T10:00:00.000Z',
     };
     meetingsService.findOne.mockResolvedValue(meeting);
+    transcriptSegmentsRepository.create.mockImplementation(
+      (segment) => segment as TranscriptSegmentEntity,
+    );
+    transcriptSegmentsRepository.save.mockImplementation((segment) =>
+      Promise.resolve(segment),
+    );
 
     const segment = await transcriptsService.create(meeting.id, {
       speaker: 'David',
@@ -57,15 +75,28 @@ describe('TranscriptsService', () => {
       status: 'active',
       startedAt: '2026-08-20T10:00:00.000Z',
     };
-    meetingsService.findOne.mockResolvedValue(meeting);
-    const segment = await transcriptsService.create(meeting.id, {
+    const entity: TranscriptSegmentEntity = {
+      id: 'segment-id',
+      meetingId: meeting.id,
+      meeting: {} as MeetingEntity,
       speaker: 'David',
       text: 'Let us review the architecture.',
-    });
+      capturedAt: new Date('2026-08-20T10:00:00.000Z'),
+    };
+    meetingsService.findOne.mockResolvedValue(meeting);
+    transcriptSegmentsRepository.find.mockResolvedValue([entity]);
 
     await expect(
       transcriptsService.findAllByMeetingId(meeting.id),
-    ).resolves.toEqual([segment]);
+    ).resolves.toEqual([
+      {
+        id: 'segment-id',
+        meetingId: meeting.id,
+        speaker: 'David',
+        text: 'Let us review the architecture.',
+        capturedAt: '2026-08-20T10:00:00.000Z',
+      },
+    ]);
   });
 
   it('rejects segments for an unknown meeting', async () => {
