@@ -14,11 +14,11 @@ export class TranscriptsService {
     private readonly transcriptGateway: TranscriptGateway,
   ) {}
 
-  create(
+  async create(
     meetingId: string,
     createTranscriptSegmentDto: CreateTranscriptSegmentDto,
-  ): TranscriptSegment {
-    const meeting = this.meetingsService.findOne(meetingId);
+  ): Promise<TranscriptSegment> {
+    const meeting = await this.meetingsService.findOne(meetingId);
 
     if (meeting.status === 'ended') {
       throw new ConflictException(
@@ -42,8 +42,8 @@ export class TranscriptsService {
     return segment;
   }
 
-  findAllByMeetingId(meetingId: string): TranscriptSegment[] {
-    this.meetingsService.findOne(meetingId);
+  async findAllByMeetingId(meetingId: string): Promise<TranscriptSegment[]> {
+    await this.meetingsService.findOne(meetingId);
 
     return this.segmentsByMeetingId.get(meetingId) ?? [];
   }

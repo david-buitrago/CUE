@@ -21,9 +21,13 @@ export class SimulatorService {
 
   constructor(private readonly transcriptsService: TranscriptsService) {}
 
-  run(meetingId: string): TranscriptSegment[] {
-    return this.scenario.map((segment) =>
-      this.transcriptsService.create(meetingId, segment),
-    );
+  async run(meetingId: string): Promise<TranscriptSegment[]> {
+    const segments: TranscriptSegment[] = [];
+
+    for (const segment of this.scenario) {
+      segments.push(await this.transcriptsService.create(meetingId, segment));
+    }
+
+    return segments;
   }
 }

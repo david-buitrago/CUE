@@ -4,6 +4,7 @@ import type { Server } from 'node:http';
 import { io, type Socket } from 'socket.io-client';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { DataSource } from 'typeorm';
 import { AppModule } from './../src/app.module';
 import type { Meeting } from './../src/meetings/meeting';
 import type { TranscriptSegment } from './../src/transcripts/transcript-segment';
@@ -27,6 +28,9 @@ describe('CUE API (e2e)', () => {
     );
 
     await app.init();
+
+    const dataSource = app.get(DataSource);
+    await dataSource.query('TRUNCATE TABLE meetings');
   });
 
   afterEach(async () => {
