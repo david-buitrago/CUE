@@ -1,7 +1,7 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import type { Server } from 'node:http';
-import { io } from 'socket.io-client';
+import { io, type Socket } from 'socket.io-client';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
@@ -257,7 +257,7 @@ describe('CUE API (e2e)', () => {
       });
   });
 
-  it('emits a WebSocket event when a transcript segment is created', async () => {
+  it('emits a WebSocket event only to the meeting subscribers', async () => {
     await app.listen(0);
 
     const httpServer = app.getHttpServer() as unknown as Server;
@@ -267,40 +267,89 @@ describe('CUE API (e2e)', () => {
       throw new Error('The test server did not expose a TCP address');
     }
 
-    const meetingResponse = await request(app.getHttpServer())
+    const firstMeetingResponse = await request(app.getHttpServer())
       .post('/meetings')
       .send({ title: 'Architecture discussion' })
       .expect(201);
 
-    const meeting = meetingResponse.body as Meeting;
+    const firstMeeting = firstMeetingResponse.body as Meeting;
+
+    const secondMeetingResponse = await request(app.getHttpServer())
+      .post('/meetings')
+      .send({ title: 'Product discussion' })
+      .expect(201);
+
+    const secondMeeting = secondMeetingResponse.body as Meeting;
 
     await new Promise<void>((resolve, reject) => {
-      const socket = io(`http://127.0.0.1:${address.port}/live`, {
+      const firstMeetingSocket = io(`http://127.0.0.1:${address.port}/live`, {
         transports: ['websocket'],
       });
+      const secondMeetingSocket = io(`http://127.0.0.1:${address.port}/live`, {
+        transports: ['websocket'],
+      });
+      const sockets: Socket[] = [firstMeetingSocket, secondMeetingSocket];
 
       const timeout = setTimeout(() => {
-        socket.close();
+        sockets.forEach((socket) => socket.close());
         reject(new Error('Timed out waiting for the transcript event'));
       }, 2_000);
 
       const fail = (error: Error) => {
         clearTimeout(timeout);
-        socket.close();
+        sockets.forEach((socket) => socket.close());
         reject(error);
       };
 
-      socket.on('connect_error', fail);
+      let subscriptionCount = 0;
+      const createSegmentWhenBothAreSubscribed = () => {
+        subscriptionCount += 1;
 
-      socket.on('transcript.segment.created', (value: unknown) => {
+        if (subscriptionCount === 2) {
+          void request(app.getHttpServer())
+            .post(`/meetings/${firstMeeting.id}/transcript-segments`)
+            .send({
+              speaker: 'David',
+              text: 'Let us review the architecture.',
+            })
+            .expect(201)
+            .catch(fail);
+        }
+      };
+
+      sockets.forEach((socket) => socket.on('connect_error', fail));
+
+      firstMeetingSocket.on('connect', () => {
+        firstMeetingSocket.emit('transcript.subscribe', {
+          meetingId: firstMeeting.id,
+        });
+      });
+
+      secondMeetingSocket.on('connect', () => {
+        secondMeetingSocket.emit('transcript.subscribe', {
+          meetingId: secondMeeting.id,
+        });
+      });
+
+      firstMeetingSocket.on('transcript.subscribed', (value: unknown) => {
+        expect(value).toEqual({ meetingId: firstMeeting.id });
+        createSegmentWhenBothAreSubscribed();
+      });
+
+      secondMeetingSocket.on('transcript.subscribed', (value: unknown) => {
+        expect(value).toEqual({ meetingId: secondMeeting.id });
+        createSegmentWhenBothAreSubscribed();
+      });
+
+      firstMeetingSocket.on('transcript.segment.created', (value: unknown) => {
         const segment = value as TranscriptSegment;
 
         clearTimeout(timeout);
-        socket.close();
+        sockets.forEach((socket) => socket.close());
 
         expect(segment).toEqual(
           expect.objectContaining({
-            meetingId: meeting.id,
+            meetingId: firstMeeting.id,
             speaker: 'David',
             text: 'Let us review the architecture.',
           }),
@@ -309,15 +358,12 @@ describe('CUE API (e2e)', () => {
         resolve();
       });
 
-      socket.on('connect', () => {
-        void request(app.getHttpServer())
-          .post(`/meetings/${meeting.id}/transcript-segments`)
-          .send({
-            speaker: 'David',
-            text: 'Let us review the architecture.',
-          })
-          .expect(201)
-          .catch(fail);
+      secondMeetingSocket.on('transcript.segment.created', () => {
+        fail(
+          new Error(
+            'A subscriber received a transcript event for another meeting',
+          ),
+        );
       });
     });
   });
