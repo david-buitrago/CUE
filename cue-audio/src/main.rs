@@ -193,6 +193,7 @@ fn stream(arguments: &[String]) -> Result<(), String> {
     .with_header("Authorization", format!("Bearer {token}"));
     let (mut socket, _) = connect(request).map_err(|error| error.to_string())?;
     socket.send(Message::Text(serde_json::json!({"type":"start","protocol":"cue-audio-v1","meetingId":meeting_id,"streams":[{"channel":channel,"sampleRate":16000,"channels":1,"encoding":"pcm_s16le"}]}).to_string().into())).map_err(|error| error.to_string())?;
+    wait_until_engine_starts(&mut socket)?;
     input_stream.play().map_err(|error| error.to_string())?;
     let started = Instant::now();
     let mut sequence = 0_u32;
@@ -325,6 +326,26 @@ fn encode_frame(channel: &str, sequence: u32, pcm: Vec<u8>) -> Vec<u8> {
     frame.extend_from_slice(&sequence.to_be_bytes());
     frame.extend_from_slice(&pcm);
     frame
+}
+
+fn wait_until_engine_starts(
+    socket: &mut tungstenite::WebSocket<tungstenite::stream::MaybeTlsStream<std::net::TcpStream>>,
+) -> Result<(), String> {
+    match socket.read().map_err(|error| error.to_string())? {
+        Message::Text(message) => {
+            let response: serde_json::Value =
+                serde_json::from_str(&message).map_err(|error| error.to_string())?;
+
+            if response.get("type").and_then(serde_json::Value::as_str) == Some("started") {
+                Ok(())
+            } else {
+                Err(format!("engine did not start the audio stream: {response}"))
+            }
+        }
+        message => Err(format!(
+            "engine returned an unexpected WebSocket message: {message:?}"
+        )),
+    }
 }
 
 fn report_stream_error(error: cpal::Error) {
