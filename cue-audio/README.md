@@ -21,6 +21,7 @@ the `THEM` channel. The microphone will map to the `YOU` channel.
 
 ## Next milestone
 
-Add the authenticated local audio protocol to stream bounded PCM frames to
-`cue-engine`, with timestamps, sequence numbers, channel labels, and explicit
-backpressure.
+The engine now accepts an authenticated WebSocket connection at
+`ws://127.0.0.1:3000/audio`. The sidecar sender is the next milestone. It will
+stream bounded 16 kHz mono `pcm_s16le` frames with channel labels and sequence
+numbers.
