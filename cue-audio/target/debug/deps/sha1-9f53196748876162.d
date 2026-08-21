@@ -1,0 +1,11 @@
+/Users/davidbuitrago/Develop/CUE/cue-audio/target/debug/deps/sha1-9f53196748876162.d: /Users/davidbuitrago/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha1-0.11.0/src/lib.rs /Users/davidbuitrago/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha1-0.11.0/src/block_api.rs /Users/davidbuitrago/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha1-0.11.0/src/compress.rs /Users/davidbuitrago/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha1-0.11.0/src/consts.rs /Users/davidbuitrago/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha1-0.11.0/src/../README.md /Users/davidbuitrago/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha1-0.11.0/src/compress/soft.rs /Users/davidbuitrago/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha1-0.11.0/src/compress/aarch64_sha2.rs
+
+/Users/davidbuitrago/Develop/CUE/cue-audio/target/debug/deps/libsha1-9f53196748876162.rmeta: /Users/davidbuitrago/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha1-0.11.0/src/lib.rs /Users/davidbuitrago/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha1-0.11.0/src/block_api.rs /Users/davidbuitrago/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha1-0.11.0/src/compress.rs /Users/davidbuitrago/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha1-0.11.0/src/consts.rs /Users/davidbuitrago/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha1-0.11.0/src/../README.md /Users/davidbuitrago/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha1-0.11.0/src/compress/soft.rs /Users/davidbuitrago/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha1-0.11.0/src/compress/aarch64_sha2.rs
+
+/Users/davidbuitrago/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha1-0.11.0/src/lib.rs:
+/Users/davidbuitrago/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha1-0.11.0/src/block_api.rs:
+/Users/davidbuitrago/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha1-0.11.0/src/compress.rs:
+/Users/davidbuitrago/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha1-0.11.0/src/consts.rs:
+/Users/davidbuitrago/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha1-0.11.0/src/../README.md:
+/Users/davidbuitrago/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha1-0.11.0/src/compress/soft.rs:
+/Users/davidbuitrago/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha1-0.11.0/src/compress/aarch64_sha2.rs:

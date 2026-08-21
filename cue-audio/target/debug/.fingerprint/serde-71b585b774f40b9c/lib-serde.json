@@ -1,0 +1,24 @@
+{
+  "rustc": 13462371384788945141,
+  "features": "[\"default\", \"derive\", \"serde_derive\", \"std\"]",
+  "declared_features": "[\"alloc\", \"default\", \"derive\", \"rc\", \"serde_derive\", \"std\", \"unstable\"]",
+  "target": 11327258112168116673,
+  "profile": 5347358027863023418,
+  "path": 9942393622135153526,
+  "deps": [
+    [6557439603276904804, "build_script_build", false, 1014736438067000037],
+    [11029742160753049355, "serde_core", false, 3941346373264314640],
+    [13312204359551525516, "serde_derive", false, 15423557971007160866]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug/.fingerprint/serde-71b585b774f40b9c/dep-lib-serde",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 9396254390672932401,
+  "compile_kind": 0
+}

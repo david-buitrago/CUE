@@ -1,0 +1,24 @@
+{
+  "rustc": 13462371384788945141,
+  "features": "[\"alloc\", \"default\", \"oid\"]",
+  "declared_features": "[\"alloc\", \"default\", \"oid\", \"zeroize\"]",
+  "target": 3703631447041615849,
+  "profile": 3839131438640947986,
+  "path": 17963586032815979641,
+  "deps": [
+    [7399246987764853012, "digest", false, 4901351058236717242],
+    [7667230146095136825, "cfg_if", false, 10032047451475544395],
+    [16378603989457970572, "cpufeatures", false, 16476778882766798301]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug/.fingerprint/sha1-9f53196748876162/dep-lib-sha1",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 9396254390672932401,
+  "compile_kind": 0
+}

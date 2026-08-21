@@ -1,0 +1,29 @@
+{
+  "rustc": 13462371384788945141,
+  "features": "[\"data-encoding\", \"default\", \"handshake\", \"http\", \"httparse\", \"sha1\"]",
+  "declared_features": "[\"__rustls-tls\", \"data-encoding\", \"default\", \"handshake\", \"http\", \"httparse\", \"native-tls\", \"native-tls-crate\", \"native-tls-vendored\", \"rustls\", \"rustls-native-certs\", \"rustls-pki-types\", \"rustls-tls-native-roots\", \"rustls-tls-webpki-roots\", \"sha1\", \"url\", \"webpki-roots\"]",
+  "target": 5395530797274129873,
+  "profile": 5347358027863023418,
+  "path": 1612733272410135214,
+  "deps": [
+    [500864814328762103, "data_encoding", false, 14123309700488351797],
+    [3735948657744455170, "rand", false, 12055939718068950237],
+    [4012234191921133045, "thiserror", false, 9034984113338300176],
+    [6163892036024256188, "httparse", false, 14839902619489086943],
+    [11926622812581095017, "bytes", false, 13958760603144304285],
+    [12328341851100645683, "http", false, 235764619829123462],
+    [13058639913598723517, "sha1", false, 6682382938409781774],
+    [17353235279385985750, "log", false, 13598273335665315941]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "debug/.fingerprint/tungstenite-1358077f0dc4fcac/dep-lib-tungstenite",
+        "checksum": false
+      }
+    }
+  ],
+  "rustflags": [],
+  "config": 9396254390672932401,
+  "compile_kind": 0
+}

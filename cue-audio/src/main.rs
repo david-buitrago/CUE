@@ -1,9 +1,12 @@
+mod pcm;
+
 use std::{
     env,
     process::ExitCode,
     sync::{
         Arc,
         atomic::{AtomicU64, Ordering},
+        mpsc::{self, SyncSender, TrySendError},
     },
     thread,
     time::{Duration, Instant},
@@ -13,12 +16,16 @@ use cpal::{
     Device, SampleFormat, Stream,
     traits::{DeviceTrait, HostTrait, StreamTrait},
 };
+use pcm::Pcm16kFramer;
+use tungstenite::{Message, client::ClientRequestBuilder, connect};
 
 #[derive(Default)]
 struct CaptureMetrics {
     callbacks: AtomicU64,
     samples: AtomicU64,
     peak_milli: AtomicU64,
+    pcm_frames: AtomicU64,
+    dropped_pcm_frames: AtomicU64,
 }
 
 impl CaptureMetrics {
@@ -72,9 +79,10 @@ fn run(arguments: Vec<String>) -> Result<(), String> {
     match arguments.first().map(String::as_str) {
         Some("list-devices") => list_devices(),
         Some("capture") => capture(&arguments[1..]),
+        Some("stream") => stream(&arguments[1..]),
         _ => {
             print_usage();
-            Err("expected `list-devices` or `capture`".to_string())
+            Err("expected `list-devices`, `capture`, or `stream`".to_string())
         }
     }
 }
@@ -126,7 +134,7 @@ fn capture(arguments: &[String]) -> Result<(), String> {
         .default_input_config()
         .map_err(|error| error.to_string())?;
     let metrics = Arc::new(CaptureMetrics::default());
-    let stream = build_input_stream(&device, &configuration, Arc::clone(&metrics))?;
+    let stream = build_input_stream(&device, &configuration, Arc::clone(&metrics), None)?;
 
     println!(
         "Capturing `{}` for {duration_seconds}s: {} Hz, {} channel(s), {:?}",
@@ -142,14 +150,77 @@ fn capture(arguments: &[String]) -> Result<(), String> {
     while started_at.elapsed() < Duration::from_secs(duration_seconds) {
         thread::sleep(Duration::from_secs(1));
         println!(
-            "{}s: callbacks={}, samples={}, peak={:.3}",
+            "{}s: callbacks={}, samples={}, pcm_frames={}, peak={:.3}",
             started_at.elapsed().as_secs(),
             metrics.callbacks.load(Ordering::Relaxed),
             metrics.samples.load(Ordering::Relaxed),
+            metrics.pcm_frames.load(Ordering::Relaxed),
             metrics.peak_milli.load(Ordering::Relaxed) as f32 / 1_000.0,
         );
     }
 
+    Ok(())
+}
+
+fn stream(arguments: &[String]) -> Result<(), String> {
+    let meeting_id = required_option(arguments, "--meeting-id")?;
+    let channel = required_option(arguments, "--channel")?;
+    if channel != "YOU" && channel != "THEM" {
+        return Err("--channel must be YOU or THEM".to_string());
+    }
+    let device_name = required_option(arguments, "--device")?;
+    let token =
+        env::var("CUE_AUDIO_SESSION_TOKEN").map_err(|_| "CUE_AUDIO_SESSION_TOKEN must be set")?;
+    let engine_url = option_value(arguments, "--engine-url").unwrap_or("ws://127.0.0.1:3000/audio");
+    let seconds = option_value(arguments, "--seconds")
+        .unwrap_or("30")
+        .parse::<u64>()
+        .map_err(|_| "--seconds must be a whole number")?;
+    let host = cpal::default_host();
+    let device = select_device(&host, Some(device_name))?;
+    let configuration = device
+        .default_input_config()
+        .map_err(|error| error.to_string())?;
+    let metrics = Arc::new(CaptureMetrics::default());
+    let (sender, receiver) = mpsc::sync_channel(20);
+    let input_stream =
+        build_input_stream(&device, &configuration, Arc::clone(&metrics), Some(sender))?;
+    let request = ClientRequestBuilder::new(
+        engine_url
+            .parse()
+            .map_err(|error| format!("invalid --engine-url: {error}"))?,
+    )
+    .with_header("Authorization", format!("Bearer {token}"));
+    let (mut socket, _) = connect(request).map_err(|error| error.to_string())?;
+    socket.send(Message::Text(serde_json::json!({"type":"start","protocol":"cue-audio-v1","meetingId":meeting_id,"streams":[{"channel":channel,"sampleRate":16000,"channels":1,"encoding":"pcm_s16le"}]}).to_string().into())).map_err(|error| error.to_string())?;
+    input_stream.play().map_err(|error| error.to_string())?;
+    let started = Instant::now();
+    let mut sequence = 0_u32;
+    while started.elapsed() < Duration::from_secs(seconds) {
+        if let Ok(pcm) = receiver.recv_timeout(Duration::from_millis(100)) {
+            socket
+                .send(Message::Binary(encode_frame(channel, sequence, pcm).into()))
+                .map_err(|error| error.to_string())?;
+            sequence = sequence.wrapping_add(1);
+        }
+    }
+    socket
+        .send(Message::Text(
+            serde_json::json!({"type":"commit","channel":channel})
+                .to_string()
+                .into(),
+        ))
+        .map_err(|error| error.to_string())?;
+    socket
+        .send(Message::Text(
+            serde_json::json!({"type":"stop"}).to_string().into(),
+        ))
+        .map_err(|error| error.to_string())?;
+    socket.close(None).map_err(|error| error.to_string())?;
+    println!(
+        "Sent {sequence} frame(s); dropped {} due to local backpressure.",
+        metrics.dropped_pcm_frames.load(Ordering::Relaxed)
+    );
     Ok(())
 }
 
@@ -158,6 +229,10 @@ fn option_value<'a>(arguments: &'a [String], option: &str) -> Option<&'a str> {
         .windows(2)
         .find(|pair| pair[0] == option)
         .map(|pair| pair[1].as_str())
+}
+
+fn required_option<'a>(arguments: &'a [String], option: &str) -> Result<&'a str, String> {
+    option_value(arguments, option).ok_or_else(|| format!("{option} is required"))
 }
 
 fn select_device(host: &cpal::Host, requested_name: Option<&str>) -> Result<Device, String> {
@@ -177,16 +252,32 @@ fn build_input_stream(
     device: &Device,
     configuration: &cpal::SupportedStreamConfig,
     metrics: Arc<CaptureMetrics>,
+    sender: Option<SyncSender<Vec<u8>>>,
 ) -> Result<Stream, String> {
     match configuration.sample_format() {
-        SampleFormat::F32 => device
-            .build_input_stream(
-                configuration.config(),
-                move |data: &[f32], _| metrics.record_f32(data),
-                report_stream_error,
-                None,
-            )
-            .map_err(|error| error.to_string()),
+        SampleFormat::F32 => {
+            let mut framer =
+                Pcm16kFramer::new(configuration.sample_rate(), configuration.channels())?;
+            device
+                .build_input_stream(
+                    configuration.config(),
+                    move |data: &[f32], _| {
+                        metrics.record_f32(data);
+                        match framer.push_f32(data) {
+                            Ok(frames) => {
+                                metrics
+                                    .pcm_frames
+                                    .fetch_add(frames.len() as u64, Ordering::Relaxed);
+                                enqueue_frames(&sender, &metrics, frames);
+                            }
+                            Err(error) => eprintln!("cue-audio PCM conversion error: {error}"),
+                        }
+                    },
+                    report_stream_error,
+                    None,
+                )
+                .map_err(|error| error.to_string())
+        }
         SampleFormat::I16 => device
             .build_input_stream(
                 configuration.config(),
@@ -209,6 +300,33 @@ fn build_input_stream(
     }
 }
 
+fn enqueue_frames(
+    sender: &Option<SyncSender<Vec<u8>>>,
+    metrics: &CaptureMetrics,
+    frames: Vec<Vec<u8>>,
+) {
+    let Some(sender) = sender else {
+        return;
+    };
+    for frame in frames {
+        match sender.try_send(frame) {
+            Ok(()) => {}
+            Err(TrySendError::Full(_)) => {
+                metrics.dropped_pcm_frames.fetch_add(1, Ordering::Relaxed);
+            }
+            Err(TrySendError::Disconnected(_)) => return,
+        }
+    }
+}
+
+fn encode_frame(channel: &str, sequence: u32, pcm: Vec<u8>) -> Vec<u8> {
+    let mut frame = Vec::with_capacity(pcm.len() + 5);
+    frame.push(if channel == "YOU" { 1 } else { 2 });
+    frame.extend_from_slice(&sequence.to_be_bytes());
+    frame.extend_from_slice(&pcm);
+    frame
+}
+
 fn report_stream_error(error: cpal::Error) {
     eprintln!("cue-audio input stream error: {error}");
 }
@@ -217,6 +335,9 @@ fn print_usage() {
     eprintln!("Usage:");
     eprintln!("  cue-audio list-devices");
     eprintln!("  cue-audio capture [--device <name>] [--seconds <whole-number>]");
+    eprintln!(
+        "  cue-audio stream --meeting-id <id> --channel <YOU|THEM> --device <name> [--engine-url <url>] [--seconds <whole-number>]"
+    );
 }
 
 #[cfg(test)]
